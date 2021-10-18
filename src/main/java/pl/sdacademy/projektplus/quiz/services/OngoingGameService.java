@@ -1,10 +1,13 @@
 package pl.sdacademy.projektplus.quiz.services;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.SessionScope;
+import pl.sdacademy.projektplus.quiz.dto.CategoriesDto;
+import pl.sdacademy.projektplus.quiz.dto.GameStateDto;
 import pl.sdacademy.projektplus.quiz.dto.QuestionsDto;
 import pl.sdacademy.projektplus.quiz.frontend.Difficulty;
 import pl.sdacademy.projektplus.quiz.frontend.GameOptions;
@@ -17,6 +20,7 @@ import java.util.Optional;
 @Service
 @SessionScope
 @Log
+@RequiredArgsConstructor
 public class OngoingGameService {
     private GameOptions gameOptions;
     private int currentQuestionIndex;
@@ -25,8 +29,7 @@ public class OngoingGameService {
 
     private List<QuestionsDto.QuestionDto> questions;
 
-    @Autowired
-    private QuizDataService quizDataService;
+    private final QuizDataService quizDataService;
 
     public void init(GameOptions gameOptions) {
         this.gameOptions = gameOptions;
@@ -45,11 +48,17 @@ public class OngoingGameService {
     }
 
     public String getCurrentQuestion() {
+        if (questions == null || currentQuestionIndex >= questions.size()) {
+            return null;
+        }
         QuestionsDto.QuestionDto dto = questions.get(currentQuestionIndex);
         return dto.getQuestion();
     }
 
     public List<String> getCurrentQuestionAnswersInRandomOrder() {
+        if (questions == null || currentQuestionIndex >= questions.size()) {
+            return Collections.emptyList();
+        }
         QuestionsDto.QuestionDto dto = questions.get(currentQuestionIndex);
 
         List<String> answers = new ArrayList<>();
@@ -81,8 +90,12 @@ public class OngoingGameService {
     public String getCategoryName() {
         Optional<String> category = quizDataService.getQuizCategories().stream()
                 .filter(categoryDto -> categoryDto.getId() == gameOptions.getCategoryId())
-                .map(categoryDto -> categoryDto.getName())
+                .map(CategoriesDto.CategoryDto::getName)
                 .findAny();
         return category.orElse(null);
+    }
+
+    public GameStateDto getCurrentGameState() {
+        return new GameStateDto(gameOptions, currentQuestionIndex+1, points, getCurrentQuestion(), getCurrentQuestionAnswersInRandomOrder());
     }
 }
